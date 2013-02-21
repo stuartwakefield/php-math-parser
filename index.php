@@ -2,12 +2,6 @@
 error_reporting(E_ALL);
 ini_set("display_errors", 1);
 
-// A simple maths expression
-$expr = "144 * 30";
-// The answer to the expression
-$expect = 2;
-// Equates to operation(operand, operand) - add(1, 1)
-
 class OperatorToken {
 	function execute($a, $b) {}
 }
@@ -105,32 +99,50 @@ function number($a) {
 }
 
 // Lexical analysis
-$tokens = array();
-$rem = $expr;
-while(strlen($rem) > 0) {
-	$rem = trim($rem);
+function math_lex($expr) {
+	$tokens = array();
+	$rem = $expr;
+	while(strlen($rem) > 0) {
+		$rem = trim($rem);
 
-	$matches = array();
+		$matches = array();
 
-	$found = "";
+		$found = "";
 
-	if(preg_match('/^(\d+)/', $rem, $matches)) {
-		$tokens[] = token_number($matches[0]);
-	} else if(preg_match('/^([+\/\*-])/', $rem, $matches)) {
-		$tokens[] = token_operator($matches[0]);
+		if(preg_match('/^(\d+)/', $rem, $matches)) {
+			$tokens[] = token_number($matches[0]);
+		} else if(preg_match('/^([+\/\*-])/', $rem, $matches)) {
+			$tokens[] = token_operator($matches[0]);
+		}
+
+		if(!count($matches)) die("Lexical error!");
+
+		$rem = substr($rem, strlen($matches[0]));
 	}
-
-	if(!count($matches)) die("Lexical error!");
-
-	$rem = substr($rem, strlen($matches[0]));
+	return $tokens;
 }
 
 // Syntax analysis
-$operations = array();
-for($i = 0; $i < count($tokens); ++$i) {
-	if($tokens[$i] instanceof OperandToken && $tokens[$i + 1] instanceof OperatorToken && $tokens[$i + 2] instanceof OperandToken) {
-		$operations[] = new Operation($tokens[$i], $tokens[$i + 1], $tokens[$i + 2]);
-		$i += 2;
+function math_syntax($tokens) {
+	$tree = null;
+	for($i = 0; $i < count($tokens); ++$i) {
+		if($tokens[$i] instanceof OperandToken && $tokens[$i + 1] instanceof OperatorToken && $tokens[$i + 2] instanceof OperandToken) {
+			$tree = new Operation($tokens[$i], $tokens[$i + 1], $tokens[$i + 2]);
+			$i += 2;
+		}
 	}
+	return $tree;
 }
-echo $operations[0]->run();
+
+function math_evaluate($expr) {
+	return math_syntax(math_lex($expr))->run();
+}
+
+function assert_equal($a, $b) {
+	if($a !== $b) die("Should have been $a but was $b!");
+}
+
+// A simple maths expression
+assert_equal(4320, math_evaluate("144 * 30"));
+
+echo("Tests pass!");
