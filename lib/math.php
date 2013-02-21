@@ -15,8 +15,11 @@ function math_lex($expr) {
 
 		$found = "";
 
-		if(preg_match('/^(\d+)/', $rem, $matches)) {
-			$tokens[] = token_number($matches[0]);
+		
+		if(preg_match('/^(\d*\.\d+)/', $rem, $matches)) {
+			$tokens[] = token_float($matches[0]);
+		} else if(preg_match('/^(\d+)/', $rem, $matches)) {
+			$tokens[] = token_integer($matches[0]);
 		} else if(preg_match('/^([+\/\*-])/', $rem, $matches)) {
 			$tokens[] = token_operator($matches[0]);
 		}

@@ -1,4 +1,4 @@
 <?php
-class OperatorToken {
-	function execute($a, $b) {}
+interface OperatorToken {
+	function execute($a, $b);
 }

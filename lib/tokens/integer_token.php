@@ -1,7 +1,7 @@
 <?php
 require_once "operand_token.php";
 
-class NumberToken extends OperandToken {
+class IntegerToken implements OperandToken {
 
 	private $n;
 

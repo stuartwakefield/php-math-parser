@@ -1,4 +1,4 @@
 <?php
-class OperandToken {
-	function get() {}
+interface OperandToken {
+	function get();
 }
