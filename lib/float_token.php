@@ -1,7 +1,8 @@
 <?php
 require_once "operand_token.php";
+require_once "operand.php";
 
-class FloatToken implements OperandToken {
+class FloatToken extends Operand implements OperandToken {
 
 	private $n;
 

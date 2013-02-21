@@ -1,17 +1,11 @@
 # PHP Math Parser
 
-A math expression parser for PHP. Needs some work on the syntax analysis in
-`lib/math.php`.
+A math expression parser for PHP. Some tidy up needed remove unnecessary classes
+for example.
 
-Currently the syntax analysis does nothing more than this:
+## Info about syntax analysis
 
-    1 + 1
-	| | |
-    +-+-+
-      |
-      2
-
-It will need to work with operator precedence, for example:
+It works with operator precedence, for example:
 
     1 + 1 / 2
     | | | | |
@@ -70,14 +64,14 @@ Our token definitions:
     divide
     addition
     subtract
-	
+    
 Our syntax patterns:
 
-	p = openparen o closeparen
+    p = openparen o closeparen
     e = o (exponent|root) o
     m = o (multiply|divide) o
     a = o (add|subtract) o
-	o = (number|p|e|m|a)
+    o = (number|p|e|m|a)
     
 
 Simple example `1 + 1`:
@@ -97,7 +91,7 @@ Simple example `1 + 1`:
 
 A more complex example `1 + 1 / 2`:
 
-	# original tokens
+    # original tokens
     [ number
     , add
     , number

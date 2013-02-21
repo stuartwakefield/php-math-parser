@@ -1,5 +1,7 @@
 <?php
-class Operation {
+require_once "operand.php";
+
+class Operation extends Operand {
 
 	private $left;
 	private $right;
@@ -11,7 +13,7 @@ class Operation {
 		$this->operator = $operator;
 	}
 
-	function run() {
+	function get() {
 		return $this->operator->execute($this->left->get(), $this->right->get());
 	}
 

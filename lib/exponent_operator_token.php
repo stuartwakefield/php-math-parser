@@ -1,10 +1,10 @@
 <?php
 require_once "operator_token.php";
 
-class DivideOperatorToken implements OperatorToken {
+class ExponentOperatorToken implements OperatorToken {
 	
 	function execute($a, $b) {
-		return $a / $b;
+		return pow($a, $b);
 	}
 
 }

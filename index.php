@@ -17,6 +17,6 @@ assert_floaty_equal(0.4, math_evaluate("1.2 / 3"));
 assert_floaty_equal(75.65, math_evaluate("54.25 + 21.4"));
 assert_floaty_equal(9.5, math_evaluate("14.2 - 4.7"));
 
-// assert_equal(2, math_evaluate("(2 * (1 + 2)) / 3"));
+assert_equal(2, math_evaluate("(2 * (1 + 2)) / 3"));
 
 echo("Tests pass!");
