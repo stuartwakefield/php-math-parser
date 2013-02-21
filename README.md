@@ -73,155 +73,111 @@ Our token definitions:
 	
 Our syntax patterns:
 
-    expop = operand (exponent|root) operand
-    mulop = operand (multiply|divide) operand
-    addop = operand (add|subtract) operand
-    paren = openparen operation closeparen
-    operand = (paren|number)
-    operation = (expop|mulop|addop)
+	p = openparen o closeparen
+    e = o (exponent|root) o
+    m = o (multiply|divide) o
+    a = o (add|subtract) o
+	o = (number|p|e|m|a)
+    
 
-Our tokens:
+Simple example `1 + 1`:
 
+    # original tokens
+    [ number
+    , add
+    , number ]
+
+    # pass 1
+    [ o(number)
+    , add
+    , o(number) ]
+
+    # pass 2
+    [ o(a(o(number), add, o(number))) ]
+
+A more complex example `1 + 1 / 2`:
+
+	# original tokens
+    [ number
+    , add
+    , number
+    , divide
+    , number ]
+
+    # pass 1
+    [ o(number)
+    , add
+    , o(number)
+    , divide
+    , o(number) ]
+
+    # pass 2
+    [ o(number)
+    , add
+    , o(m(o(number), divide, o(number))) ]
+
+    # pass 3
+    [ o(a(o(number), o(m(o(number), divide, o(number))))) ]
+
+An even more complex example `(2 * (2 + 1)) / 3`:
+
+    # original tokens
     [ openparen 
     , number 
-    , multiplyoperator 
+    , multiply 
     , openparen
     , number
-    , additionoperator
+    , add
     , number
     , closeparen
     , closeparen
-    , divideoperator
+    , divide
     , number ]
 
-Check for pattern E, no matches, pattern M, two matches:
-
-    [ openparen
-    , number
-    , M(multiplyoperator)
+    # first pass
+    [ openparen 
+    , o(number)
+    , multiply 
     , openparen
-    , number
-    , additionoperator
-    , number
+    , o(number)
+    , add
+    , o(number)
     , closeparen
     , closeparen
-    , M(divideoperator)
-    , number ]
+    , divide
+    , o(number) ]
 
-Check for pattern A, one match:
-
-    [ openparen
-    , number
-    , M(multiplyoperator)
+    # second pass
+    [ openparen 
+    , o(number)
+    , multiply 
     , openparen
-    , number
-    , A(additionoperator)
-    , number
+    , o(a(o(number), add, o(number)))
     , closeparen
     , closeparen
-    , M(divideoperator)
-    , number ]
+    , divide
+    , o(number) ]
 
-Check for pattern operator, three matches:
-
-    [ openparen
-    , number
-    , operator(M(multiplyoperator))
-    , openparen
-    , number
-    , operator(A(additionoperator))
-    , number
+    # third pass
+    [ openparen 
+    , o(number)
+    , multiply 
+    , o(p(openparen, o(a(o(number), add, o(number))), closeparen))
     , closeparen
+    , divide
+    , o(number) ]
+
+    # fourth pass
+    [ openparen 
+    , o(m(o(number), multiply, o(p(openparen, o(a(o(number), add, o(number))), closeparen))))
     , closeparen
-    , operator(M(divideoperator))
-    , number ]
+    , divide
+    , o(number) ]
 
-Check for pattern paren, no matches, check for pattern operand, four matches:
+    # fifth pass
+    [ o(p(openparen, o(m(o(number), multiply, o(p(openparen, o(a(o(number), add, o(number))), closeparen)))), closeparen))
+    , divide
+    , o(number) ]
 
-    [ openparen
-    , operand(number)
-    , operator(M(multiplyoperator))
-    , openparen
-    , operand(number)
-    , operator(A(additionoperator))
-    , operand(number)
-    , closeparen
-    , closeparen
-    , operator(M(divideoperator))
-    , operand(number) ]
-
-Check for pattern operation, two matches:
-
-    [ openparen
-    , operand(number)
-    , operator(M(multiplyoperator))
-    , openparen
-    , operand(number)
-    , operation(operator(A(additionoperator)), operand(number))
-    , closeparen
-    , closeparen
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-Check for pattern statement, one match:
-
-    [ openparen
-    , operand(number)
-    , operator(M(multiplyoperator))
-    , openparen
-    , statement(operand(number), operation(operator(A(additionoperator)), operand(number)))
-    , closeparen
-    , closeparen
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-Matches found in this matching session and array length > 1, run next pattern matching session, no Es, no Ms, no As, no operators, one paren:
-
-    [ openparen
-    , operand(number)
-    , operator(M(multiplyoperator))
-    , paren(openparen, statement(operand(number), operation(operator(A(additionoperator)), operand(number))), closeparen)
-    , closeparen
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-One match for operand:
-
-    [ openparen
-    , operand(number)
-    , operator(M(multiplyoperator))
-    , operand(paren(openparen, statement(operand(number), operation(operator(A(additionoperator)), operand(number))), closeparen))
-    , closeparen
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-One match for operation:
-
-    [ openparen
-    , operand(number)
-    , operation(operator(M(multiplyoperator)), operand(paren(openparen, statement(operand(number), operation(operator(A(additionoperator)), operand(number))), closeparen)))
-    , closeparen
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-One match for statement:
-
-    [ openparen
-    , statement(operand(number), operation(operator(M(multiplyoperator)), operand(paren(openparen, statement(operand(number), operation(operator(A(additionoperator)), operand(number))), closeparen))))
-    , closeparen
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-Matches found in this session and array length > 1, run next pattern matching session... No Es, Ms, As, operators, one paren:
-
-    [ paren(openparen, statement(operand(number), operation(operator(M(multiplyoperator)), operand(paren(openparen, statement(operand(number), operation(operator(A(additionoperator)), operand(number))), closeparen)))), closeparen)
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-Match for operand:
-
-    [ operand(paren(openparen, statement(operand(number), operation(operator(M(multiplyoperator)), operand(paren(openparen, statement(operand(number), operation(operator(A(additionoperator)), operand(number))), closeparen)))), closeparen))
-    , operation(operator(M(divideoperator)), operand(number)) ]
-
-No matches for operation, one match for statement:
-
-	[ statement(operand(paren(openparen, statement(operand(number), operation(operator(M(multiplyoperator)), operand(paren(openparen, statement(operand(number), operation(operator(A(additionoperator)), operand(number))), closeparen)))), closeparen)), operation(operator(M(divideoperator)), operand(number))) ]
-
-Array length == 1 and item is a statement, syntax analysis complete! Not quite, it doesn't tackle operator
-precedence.
-
-    [ statement(operand(number), operation(operator(A(additionoperator)), operand(number)))
-    , operation(operator(M(divisionoperator)), operand(number)) ]
+    # sixth pass
+    [ o(d(o(p(openparen, o(m(o(number), multiply, o(p(openparen, o(a(o(number), add, o(number))), closeparen)))), closeparen)), divide, o(number))) ]
