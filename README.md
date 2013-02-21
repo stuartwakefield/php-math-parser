@@ -64,12 +64,12 @@ Our token definitions:
     openparen
     closeparen
     number
-    exponentoperator
-    rootoperator
-    multiplyoperator
-    divideoperator
-    additionoperator
-    subtractoperator
+    exponent
+    root
+    multiply
+    divide
+    addition
+    subtract
 	
 Our syntax patterns:
 
