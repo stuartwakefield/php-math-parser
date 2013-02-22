@@ -53,9 +53,12 @@ function math_calculate_tree_on_stub($val) {
 	return null;
 }
 
-function math_evaluate($expr) {
+function math_calculate($expr) {
 
-	$patterns = array(
+	if(!strlen(trim($expr))) 
+		return null;
+
+	$tokens = parse_tokens($expr, array(
 		array('(\d*\.\d+)', "float"),
 		array('(\d+)', "integer"),
 		array('(\^)', "exponent"),
@@ -65,9 +68,12 @@ function math_evaluate($expr) {
 		array('(\-)', "subtract"),
 		array('\(', "openparen"),
 		array('\)', "closeparen")
-	);
+	));
 
-	$grammar = array(
+	if(!count($tokens))
+		throw new Exception("Math expression invalid! No tokens found!");
+
+	$tree = parse_grammar($tokens, array(
 		array("n", array("float")),
 		array("n", array("integer")),
 		array("m", array("multiply")),
@@ -81,9 +87,12 @@ function math_evaluate($expr) {
 		array("o", array("n")),
 		array("o", array("p")),
 		array("o", array("op"))
-	);
+	));
+	
+	if($tree[0] != "o")
+		throw new Exception("Math expression invalid! Root should be operand!");
 
-	$funcs = array(
+	$result = parse_traverse($tree, array(
 		"float" => "math_calculate_tree_on_float",
 		"integer" => "math_calculate_tree_on_integer",
 		"exponent" => "math_calculate_tree_on_exponent",
@@ -99,9 +108,10 @@ function math_evaluate($expr) {
 		"p" => "math_calculate_tree_on_paren",
 		"openparen" => "math_calculate_tree_on_stub",
 		"closeparen" => "math_calculate_tree_on_stub"
-	);
+	));
 
-	$result = parse($expr, $patterns, $grammar, $funcs);
+	if($result == null)
+		throw new Exception("Math expression invalid!");
 
 	return $result->get();
 }

@@ -14,7 +14,8 @@ function parse_tokens($expr, $patterns) {
 			}
 		}
 
-		if(!count($matches)) die("Lexical error!");
+		if(!count($matches)) 
+			throw new Exception("Lexical error! Could not tokenize '$rem'!");
 
 		$tokens[] = $token;
 		$rem = substr($rem, strlen($matches[0]));
@@ -25,8 +26,9 @@ function parse_tokens($expr, $patterns) {
 function parse_grammar($tokens, $grammar) {
 
 	$last = count($tokens);
+	$updated = true;
 
-	while(count($tokens) > 1) {
+	while($updated != false) {
 		$updated = false;
 
 		foreach($grammar as $expr) {
@@ -51,12 +53,10 @@ function parse_grammar($tokens, $grammar) {
 			}
 			
 		}
-
-		if(!$updated) {
-			var_dump($tokens);
-			die("Syntax error! No patterns found!");
-		}
 	}
+
+	if(!count($tokens) == 1)
+		throw new Exception("Syntax error! Invalid grammar!");
 
 	return $tokens[0];
 }
@@ -75,11 +75,7 @@ function parse_traverse($tree, $funcs) {
 	}
 
 	if(!isset($funcs[$token]))
-		die("Syntax error!");
+		throw new Exception("Parser error! Token parser not defined for '$token'!");
 
 	return call_user_func($funcs[$token], $value);
-}
-
-function parse($expr, $patterns, $grammar, $funcs) {
-	return parse_traverse(parse_grammar(parse_tokens($expr, $patterns), $grammar), $funcs);
 }
