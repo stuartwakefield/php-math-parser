@@ -25,7 +25,6 @@ function parse_tokens($expr, $patterns) {
 
 function parse_grammar($tokens, $grammar) {
 
-	$last = count($tokens);
 	$updated = true;
 
 	while($updated != false) {

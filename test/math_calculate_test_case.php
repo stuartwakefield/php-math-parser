@@ -66,4 +66,8 @@ class MathCalculateTestCase extends PHPUnit_Framework_TestCase {
 		$this->assertEquals(20, math_calculate("1 / ((2 + 3) * 4) ^ (5 - 6)"));
 	}
 
+	function testDebug() {
+		$this->assertEquals(0, math_calculate("3 * 2 ^ 2 / 2 ^ 2 - 3"));
+	}
+
 }

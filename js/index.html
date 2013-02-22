@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+		body {
+			font: 1em/1.5 "Calibri", Arial, sans-serif;
+			text-align: center;
+			background: #820;
+			color: #ff9;
+		}
+			#in {
+				border: 1px solid #600;
+				padding: 5px;
+				font: 1.5em/1.5 "Monaco", "Consolas", monospace;
+				width: 600px;
+				margin: 20px auto;
+				display: block;
+				text-align: center;
+				background: #eed;
+			}
+			#in::-webkit-input-placeholder {
+				color: #cc9;
+			}
+			#out {
+				border: 1px solid #600;
+				background: #710;
+				padding: 5px;
+				height: 1.5em;
+				font: 1.5em/1.5 "Monaco", "Consolas", monospace;
+				width: 600px;
+				margin: 20px auto;
+			}
+			#latex {
+				font: 1.5em/1.5 "Monaco", "Consolas", monospace;
+			}
+			#lateximg {
+				background: #eed;
+				padding: 40px;
+				border: 1px solid #600;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="calc">
+			<input id="in" placeholder="Enter your math expression" size="50"/>
+			<p>Calculated result</p>
+			<div id="out"></div>
+			<p>LaTeX for this expression</p>
+			<div id="latex"></div>
+			<img id="lateximg"/>
+		</div>
+		<script>
+			
+			var inElem = document.getElementById("in");
+			var outElem = document.getElementById("out");
+			var latexElem = document.getElementById("latex");
+			var imgElem = document.getElementById("lateximg");
+
+			function latexImage(latex) {
+				imgElem.src = "http://latex.codecogs.com/gif.latex?" + latex;
+			}
+
+			inElem.addEventListener("keyup", function(e) {
+				var result = calculate(this.value);
+				var latex = formatLaTeX(this.value);
+				if(result !== undefined) {
+					outElem.textContent = result;
+					latexElem.textContent = latex;
+					latexImage(latex);
+				} else {
+					outElem.textContent = "";
+					latexElem.textContent = "";
+					imgElem.src = "";
+				}
+			});
+
+			var patterns = [
+				["float", "\\d*\\.\\d+"],
+				["integer", "\\d+"],
+				["exponent", "\\^"],
+				["multiply", "\\*"],
+				["divide", "\\/"],
+				["add", "\\+"],
+				["subtract", "\\-"],
+				["openparen", "\\("],
+				["closeparen", "\\)"]
+			];
+
+			var grammar = [
+				["n", ["integer"]],
+				["n", ["float"]],
+				["m", ["multiply"]],
+				["m", ["divide"]],
+				["a", ["add"]],
+				["a", ["subtract"]],
+				["p", ["openparen", "o", "closeparen"]],
+				["op", ["o", "exponent", "o"]],
+				["op", ["o", "m", "o"]],
+				["op", ["o", "a", "o"]],
+				["o", ["n"]],
+				["o", ["p"]],
+				["o", ["op"]]
+			];
+
+			var wrapper = function(n) {
+				return function(children) {
+					return children[n];
+				}
+			};
+
+			var stub = function() {
+				return null;
+			};
+
+			var singleWrapper = wrapper(0);
+
+			var funcs = {
+				float: function(value) {
+					return parseFloat(value);
+				},
+				integer: function(value) {
+					return parseInt(value, 10);
+				},
+				exponent: function() {
+					return function(a, b) { return Math.pow(a, b); }
+				},
+				multiply: function() {
+					return function(a, b) { return a * b; }
+				},
+				divide: function() {
+					return function(a, b) { return a / b; }
+				},
+				add: function() {
+					return function(a, b) { return a + b; }
+				},
+				subtract: function() {
+					return function(a, b) { return a - b; }
+				},
+				op: function(children) {
+					return children[1].call(null, children[0], children[2]);
+				},
+				o: singleWrapper,
+				m: singleWrapper,
+				a: singleWrapper,
+				n: singleWrapper,
+				p: wrapper(1),
+				openparen: stub,
+				closeparen: stub
+			};
+
+			var latexFuncs = {
+				float: function(value) {
+					return value;
+				},
+				integer: function(value) {
+					return value;
+				},
+				exponent: function() {
+					return function(a, b) { return a + "^{" + b + "}"; }
+				},
+				multiply: function() {
+					return function(a, b) { return a + "\\times" + b; }
+				},
+				divide: function() {
+					return function(a, b) { return "\\frac{" + a + "}{" + b + "}"; }
+				},
+				add: function() {
+					return function(a, b) { return a + "+" + b; }
+				},
+				subtract: function() {
+					return function(a, b) { return a + "-" + b; }
+				},
+				op: function(children) {
+					return children[1].call(null, children[0], children[2]);
+				},
+				o: singleWrapper,
+				m: singleWrapper,
+				a: singleWrapper,
+				n: singleWrapper,
+				p: function(children) {
+					return "(" + children[1] + ")";
+				},
+				openparen: stub,
+				closeparen: stub
+			};
+
+			function calculate(expr) {
+				var result;
+				try {
+					result = traverseTree(parseGrammar(parseTokens(expr, patterns), grammar), funcs);
+				} catch(e) {
+
+				}
+				return result;
+			}
+
+			function formatLaTeX(expr) {
+				var result;
+				try {
+					result = traverseTree(parseGrammar(parseTokens(expr, patterns), grammar), latexFuncs);
+				} catch(e) {
+
+				}
+				return result;
+			}
+
+			function parseTokens(expr, patterns) {
+
+				var tokens = [];
+				var rem = expr;
+
+				while(rem.length > 0) {
+					rem = rem.replace(/(^\s*|\s*$)/g, "");
+
+					for(var i = 0; i < patterns.length; ++i) {
+						var regexp = new RegExp("^(" + patterns[i][1] + ")");
+						if(matches = rem.match(regexp)) {
+							tokens.push([patterns[i][0], matches[0]]);
+							break;
+						}
+					}
+
+					if(!matches)
+						throw new Error("Syntax error! Could not tokenize!");
+
+					rem = rem.substr(matches[0].length);
+				}
+
+				return tokens;
+			}
+
+			function parseGrammar(tokens, grammar) {
+
+				var updated = true;
+				while(updated) {
+					updated = false;
+
+					for(var i = 0; i < grammar.length; ++i) {
+						var pattern = grammar[i][1];
+	
+						for(var j = 0; j < tokens.length - pattern.length + 1; ++j) {
+							var match = false;
+							for(var k = 0; k < pattern.length; ++k) {
+								if(!(match = tokens[j + k][0] === pattern[k])) break;
+							}
+
+							if(match) {
+								updated = true;
+								tokens.splice(j, 0, [grammar[i][0], tokens.splice(j, pattern.length)]);
+							}
+						}
+					}
+
+				}
+
+				if(tokens.length !== 1)
+					throw new Error("Syntax error! Invalid grammar!");
+
+				return tokens[0];
+			}
+
+			function traverseTree(tree, funcs) {
+				
+				var children = tree[1];
+				if(typeof children === "object" && children.length) {
+					for(var i = 0; i < children.length; ++i) {
+						children[i] = traverseTree(children[i], funcs);
+					}
+				}
+
+				var token = tree[0];
+				if(!funcs[token])
+					throw new Error("Parse error! Function for '" + token + "'' not defined!");
+
+				return funcs[token].call(null, children);
+
+			}
+
+		</script>
+	</body>
+</html>
