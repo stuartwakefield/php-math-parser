@@ -86,20 +86,60 @@
 				["closeparen", "\\)"]
 			];
 
+			var array = {
+
+				filter: function(arr, fn) {
+					var filtered = [];
+					array.each(arr, function(item) {
+						if(fn(item))
+							filtered.push(item);
+					})
+					return filtered;
+				},
+
+				contains: function(arr, item) {
+					return array.filter(arr, function(other) {
+						return item === other;
+					}).length > 0;
+				}
+
+			}
+
+			var map = {
+				integer: "n",
+				float: "n",
+				multiply: "m",
+				divide: "m",
+				add: "a",
+				subtract: "a",
+				p: "o",
+				n: "o",
+				op: "o"
+			};
+
+			function resolveType(type, map) {
+				var resolved = [type];
+				if(map[type]) {
+					resolved.push.apply(resolved, resolveType(map[type], map));
+				}
+				return resolved;
+			}
+
+			function createTypeGraph(map) {
+				var resolved = {};
+				for(var x in map) {
+					resolved[x] = resolveType(x, map);
+				}
+				return resolved;
+			}
+
+			var resolved = createTypeGraph(map);
+
 			var grammar = [
-				["n", ["integer"]],
-				["n", ["float"]],
-				["m", ["multiply"]],
-				["m", ["divide"]],
-				["a", ["add"]],
-				["a", ["subtract"]],
 				["p", ["openparen", "o", "closeparen"]],
 				["op", ["o", "exponent", "o"]],
 				["op", ["o", "m", "o"]],
-				["op", ["o", "a", "o"]],
-				["o", ["n"]],
-				["o", ["p"]],
-				["o", ["op"]]
+				["op", ["o", "a", "o"]]
 			];
 
 			var wrapper = function(n) {
@@ -187,24 +227,20 @@
 			function calculate(expr) {
 				var result;
 				try {
-					result = traverseTree(parseGrammar(parseTokens(expr, patterns), grammar), funcs);
-				} catch(e) {
-
-				}
+					result = traverseTree(parseGrammar(parseTokens(expr, patterns, resolved), grammar, resolved), funcs);
+				} catch(e) {}
 				return result;
 			}
 
 			function formatLaTeX(expr) {
 				var result;
 				try {
-					result = traverseTree(parseGrammar(parseTokens(expr, patterns), grammar), latexFuncs);
-				} catch(e) {
-
-				}
+					result = traverseTree(parseGrammar(parseTokens(expr, patterns, resolved), grammar, resolved), latexFuncs);
+				} catch(e) {}
 				return result;
 			}
 
-			function parseTokens(expr, patterns) {
+			function parseTokens(expr, patterns, map) {
 
 				var tokens = [];
 				var rem = expr;
@@ -215,7 +251,7 @@
 					for(var i = 0; i < patterns.length; ++i) {
 						var regexp = new RegExp("^(" + patterns[i][1] + ")");
 						if(matches = rem.match(regexp)) {
-							tokens.push([patterns[i][0], matches[0]]);
+							tokens.push([mapType(patterns[i][0], map), matches[0]]);
 							break;
 						}
 					}
@@ -229,7 +265,18 @@
 				return tokens;
 			}
 
-			function parseGrammar(tokens, grammar) {
+			function mapType(type, map) {
+				return map[type] ? map[type] : [type];
+			}
+
+			function isTypeInTypes(type, types) {
+				for(var i = 0; i < types.length; ++i) {
+					if(type === types[i]) return true;
+				}
+				return false;
+			}
+
+			function parseGrammar(tokens, grammar, map) {
 
 				var updated = true;
 				while(updated) {
@@ -237,20 +284,24 @@
 
 					for(var i = 0; i < grammar.length; ++i) {
 						var pattern = grammar[i][1];
-	
+
 						for(var j = 0; j < tokens.length - pattern.length + 1; ++j) {
 							var match = false;
+
 							for(var k = 0; k < pattern.length; ++k) {
-								if(!(match = tokens[j + k][0] === pattern[k])) break;
+								if(!(match = isTypeInTypes(pattern[k], tokens[j + k][0]))) {
+									break;
+								}
 							}
 
 							if(match) {
 								updated = true;
-								tokens.splice(j, 0, [grammar[i][0], tokens.splice(j, pattern.length)]);
+								tokens.splice(j, 0, [mapType(grammar[i][0], map), tokens.splice(j, pattern.length)]);
+								--j;
 							}
+
 						}
 					}
-
 				}
 
 				if(tokens.length !== 1)
@@ -263,12 +314,14 @@
 				
 				var children = tree[1];
 				if(typeof children === "object" && children.length) {
+					var resolved = [];
 					for(var i = 0; i < children.length; ++i) {
-						children[i] = traverseTree(children[i], funcs);
+						resolved[i] = traverseTree(children[i], funcs);
 					}
+					children = resolved;
 				}
 
-				var token = tree[0];
+				var token = tree[0][0];
 				if(!funcs[token])
 					throw new Error("Parse error! Function for '" + token + "'' not defined!");
 

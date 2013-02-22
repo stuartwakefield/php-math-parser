@@ -54,6 +54,30 @@ function math_calculate_tree_on_paren($val) {
 	return $val[1];
 }
 
+function math_get_types() {
+	return array(
+		"integer" => array("n"),
+		"float" => array("n"),
+		"multiply" => array("m"),
+		"divide" => array("m"),
+		"add" => array("a"),
+		"subtract" => array("a"),
+		"op" => array("o"),
+		"p" => array("o"),
+		"n" => array("o"),
+		"o" => array(),
+		"m" => array(),
+		"a" => array(),
+		"exponent" => array(),
+		"openparen" => array(),
+		"closeparen" => array()
+	);
+}
+
+function math_get_resolved_types() {
+	return parse_resolve_types(math_get_types());
+}
+
 function math_get_tokens() {
 	return array(
 		array('(\d*\.\d+)', "float"),
@@ -70,24 +94,15 @@ function math_get_tokens() {
 
 function math_get_grammar() {
 	return array(
-		array("n", array("float")),
-		array("n", array("integer")),
-		array("m", array("multiply")),
-		array("m", array("divide")),
-		array("a", array("add")),
-		array("a", array("subtract")),
 		array("p", array("openparen", "o", "closeparen")),
 		array("op", array("o", "exponent", "o")),
 		array("op", array("o", "m", "o")),
-		array("op", array("o", "a", "o")),
-		array("o", array("n")),
-		array("o", array("p")),
-		array("o", array("op"))
+		array("op", array("o", "a", "o"))
 	);
 }
 
 function math_parse_tokens($expr) {
-	$tokens = parse_tokens($expr, math_get_tokens());
+	$tokens = parse_tokens($expr, math_get_tokens(), math_get_resolved_types());
 
 	if(!count($tokens))
 		throw new Exception("Math expression invalid! No tokens found!");
@@ -96,9 +111,9 @@ function math_parse_tokens($expr) {
 }
 
 function math_parse_grammar($tokens) {
-	$tree = parse_grammar($tokens, math_get_grammar());
-	
-	if($tree[0] != "o")
+	$tree = parse_grammar($tokens, math_get_grammar(), math_get_resolved_types());
+
+	if(!in_array("o", $tree[0]))
 		throw new Exception("Math expression invalid! Root should be operand!");
 
 	return $tree;
@@ -108,6 +123,8 @@ function math_calculate($expr) {
 
 	if(!strlen(trim($expr))) 
 		return null;
+
+	$types = math_get_resolved_types();
 
 	$result = parse_traverse(math_parse_grammar(math_parse_tokens($expr)), array(
 		"float" => "math_calculate_tree_on_float",

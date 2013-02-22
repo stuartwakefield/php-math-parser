@@ -1,5 +1,26 @@
 <?php
-function parse_tokens($expr, $patterns) {
+function parse_resolve_type($type, $types) {
+	$resolved = array($type);
+
+	if(!isset($types[$type]))
+		throw new Exception("Types error! Type '$type' is not defined!");
+
+	foreach($types[$type] as $parent) {
+		$resolved = array_merge($resolved, parse_resolve_type($parent, $types));
+	}
+
+	return $resolved;
+}
+
+function parse_resolve_types($types) {
+	$resolved = array();
+	foreach($types as $type => $parent) {
+		$resolved[$type] = parse_resolve_type($type, $types);
+	}
+	return $resolved;
+}
+
+function parse_tokens($expr, $patterns, $types) {
 	$tokens = array();
 	$rem = $expr;
 	while(strlen($rem) > 0) {
@@ -9,7 +30,7 @@ function parse_tokens($expr, $patterns) {
 
 		foreach($patterns as $pattern) {
 			if(preg_match("/^({$pattern[0]})/", $rem, $matches)) {
-				$token = array($pattern[1], $matches[0]);
+				$token = array($types[$pattern[1]], $matches[0]);
 				break;
 			}
 		}
@@ -23,7 +44,7 @@ function parse_tokens($expr, $patterns) {
 	return $tokens;
 }
 
-function parse_grammar($tokens, $grammar) {
+function parse_grammar($tokens, $grammar, $types) {
 
 	$updated = true;
 
@@ -39,15 +60,16 @@ function parse_grammar($tokens, $grammar) {
 				for($j = 0; $j < count($pattern); ++$j) {
 					$token = $tokens[$i + $j];
 					$other = $pattern[$j];
-					$match = $token[0] == $other;
+					$match = in_array($other, $token[0]);
 					if(!$match) break;
 				}
 
 				if($match) {
 					$updated = true;
-					$group = array_splice($tokens, $i, count($pattern));
-					$replace = array($expr[0], $group);
-					array_splice($tokens, $i, 0, array($replace));
+					$children = array_splice($tokens, $i, count($pattern));
+					$updated = array($types[$expr[0]], $children);
+					array_splice($tokens, $i, 0, array($updated));
+					--$i;
 				}
 			}
 			
@@ -73,8 +95,8 @@ function parse_traverse($tree, $funcs) {
 		$value = $args;
 	}
 
-	if(!isset($funcs[$token]))
+	if(!isset($funcs[$token[0]]))
 		throw new Exception("Parser error! Token parser not defined for '$token'!");
 
-	return call_user_func($funcs[$token], $value);
+	return call_user_func($funcs[$token[0]], $value);
 }

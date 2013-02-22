@@ -23,4 +23,8 @@ class MathLatexFormatterTestCase extends PHPUnit_Framework_TestCase {
 		$this->assertEquals("\\frac{1}{((2+3)\\times4)^{(5-6)}}", math_latex("1 / ((2 + 3) * 4) ^ (5 - 6)"));
 	}
 
+	function testComplexOperatorPrecedence() {
+		$this->assertEquals("\\frac{3\\times2^{2}}{2^{2}}-3", math_latex("3 * 2 ^ 2 / 2 ^ 2 - 3"));
+	}
+
 }
