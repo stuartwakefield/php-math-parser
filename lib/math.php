@@ -1,232 +1,107 @@
 <?php
-// Lexical analysis
-function math_lexer($expr) {
-	$tokens = array();
-	$rem = $expr;
-	while(strlen($rem) > 0) {
-		$rem = trim($rem);
-		$matches = array();
-		$token = null;
+require_once "parse.php";
+require_once "calculate/node_float.php";
+require_once "calculate/node_integer.php";
+require_once "calculate/node_operation.php";
+require_once "calculate/operator_exponent.php";
+require_once "calculate/operator_multiply.php";
+require_once "calculate/operator_divide.php";
+require_once "calculate/operator_add.php";
+require_once "calculate/operator_subtract.php";
 
-		if(preg_match('/^(\d*\.\d+)/', $rem, $matches)) {
-			$token = array("float", $matches[0]);
-		} else if(preg_match('/^(\d+)/', $rem, $matches)) {
-			$token = array("integer", $matches[0]);
-		} else if(preg_match('/^(\^)/', $rem, $matches)) {
-			$token = array("exponent", $matches[0]);
-		} else if(preg_match('/^(\*)/', $rem, $matches)) {
-			$token = array("multiply", $matches[0]);
-		} else if(preg_match('/^(\/)/', $rem, $matches)) {
-			$token = array("divide", $matches[0]);
-		} else if(preg_match('/^(\+)/', $rem, $matches)) {
-			$token = array("add", $matches[0]);
-		} else if(preg_match('/^(\-)/', $rem, $matches)) {
-			$token = array("subtract", $matches[0]);
-		} else if(preg_match('/^\(/', $rem, $matches)) {
-			$token = array("openparen", $matches[0]);
-		} else if(preg_match('/^\)/', $rem, $matches)) {
-			$token = array("closeparen", $matches[0]);
-		}
-
-		if(!count($matches)) die("Lexical error!");
-
-		$tokens[] = $token;
-		$rem = substr($rem, strlen($matches[0]));
-	}
-	return $tokens;
+function math_calculate_tree_on_float($val) {
+	return new NodeFloat($val);
 }
 
-// Syntax analysis
-function math_syntax($tokens) {
+function math_calculate_tree_on_integer($val) {
+	return new NodeInteger($val);
+}
+
+function math_calculate_tree_on_exponent($val) {
+	return new OperatorExponent();
+}
+
+function math_calculate_tree_on_multiply($val) {
+	return new OperatorMultiply();
+}
+
+function math_calculate_tree_on_divide($val) {
+	return new OperatorDivide();
+}
+
+function math_calculate_tree_on_add($val) {
+	return new OperatorAdd();
+}
+
+function math_calculate_tree_on_subtract($val) {
+	return new OperatorSubtract();
+}
+
+function math_calculate_tree_on_operation($val) {
+	return new NodeOperation($val[0], $val[1], $val[2]);
+}
+
+function math_calculate_tree_on_wrapper($val) {
+	return $val[0];
+}
+
+function math_calculate_tree_on_paren($val) {
+	return $val[1];
+}
+
+function math_calculate_tree_on_stub($val) {
+	return null;
+}
+
+function math_evaluate($expr) {
+
+	$patterns = array(
+		array('(\d*\.\d+)', "float"),
+		array('(\d+)', "integer"),
+		array('(\^)', "exponent"),
+		array('(\*)', "multiply"),
+		array('(\/)', "divide"),
+		array('(\+)', "add"),
+		array('(\-)', "subtract"),
+		array('\(', "openparen"),
+		array('\)', "closeparen")
+	);
 
 	$grammar = array(
-		array("number", array("float")),
-		array("number", array("integer")),
+		array("n", array("float")),
+		array("n", array("integer")),
 		array("m", array("multiply")),
 		array("m", array("divide")),
 		array("a", array("add")),
 		array("a", array("subtract")),
-		array("paren", array("openparen", "operand", "closeparen")),
-		array("op", array("operand", "exponent", "operand")),
-		array("op", array("operand", "m", "operand")),
-		array("op", array("operand", "a", "operand")),
-		array("operand", array("number")),
-		array("operand", array("paren")),
-		array("operand", array("op"))
+		array("p", array("openparen", "o", "closeparen")),
+		array("op", array("o", "exponent", "o")),
+		array("op", array("o", "m", "o")),
+		array("op", array("o", "a", "o")),
+		array("o", array("n")),
+		array("o", array("p")),
+		array("o", array("op"))
 	);
 
-	$last = count($tokens);
+	$funcs = array(
+		"float" => "math_calculate_tree_on_float",
+		"integer" => "math_calculate_tree_on_integer",
+		"exponent" => "math_calculate_tree_on_exponent",
+		"multiply" => "math_calculate_tree_on_multiply",
+		"divide" => "math_calculate_tree_on_divide",
+		"add" => "math_calculate_tree_on_add",
+		"subtract" => "math_calculate_tree_on_subtract",
+		"op" => "math_calculate_tree_on_operation",
+		"o" => "math_calculate_tree_on_wrapper",
+		"m" => "math_calculate_tree_on_wrapper",
+		"a" => "math_calculate_tree_on_wrapper",
+		"n" => "math_calculate_tree_on_wrapper",
+		"p" => "math_calculate_tree_on_paren",
+		"openparen" => "math_calculate_tree_on_stub",
+		"closeparen" => "math_calculate_tree_on_stub"
+	);
 
-	while(count($tokens) > 1) {
-		$updated = false;
+	$result = parse($expr, $patterns, $grammar, $funcs);
 
-		foreach($grammar as $expr) {
-			$pattern = $expr[1];
-
-			for($i = 0; $i <= count($tokens) - count($pattern); ++$i) {
-				$match = false;
-
-				for($j = 0; $j < count($pattern); ++$j) {
-					$token = $tokens[$i + $j];
-					$other = $pattern[$j];
-					$match = $token[0] == $other;
-					if(!$match) break;
-				}
-
-				if($match) {
-					$updated = true;
-					$group = array_splice($tokens, $i, count($pattern));
-					$replace = array($expr[0], $group);
-					array_splice($tokens, $i, 0, array($replace));
-				}
-			}
-			
-		}
-
-		if(!$updated) {
-			var_dump($tokens);
-			die("Syntax error! No patterns found!");
-		}
-	}
-
-	if($tokens[0][0] != "operand") die("Syntax error! Root expression should be operand!");
-
-	return $tokens[0];
-}
-
-class Node {
-	function get() {
-
-	}
-}
-
-class NodeFloat {
-
-	private $value;
-
-	function __construct($value) {
-		$this->value = $value;
-	}
-
-	function get() {
-		return (float) $this->value;
-	}
-}
-
-class NodeInteger {
-
-	private $value;
-
-	function __construct($value) {
-		$this->value = $value;
-	}
-
-	function get() {
-		return (int) $this->value;
-	}
-
-}
-
-class NodeOperation {
-
-	private $left;
-	private $right;
-	private $operator;
-
-	function __construct($left, $operator, $right) {
-		$this->left = $left;
-		$this->right = $right;
-		$this->operator = $operator;
-	}
-
-	function get() {
-		return $this->operator->apply($this->left->get(), $this->right->get());
-	}
-
-}
-
-class OperatorExponent {
-
-	function apply($a, $b) {
-		return pow($a, $b);
-	}
-
-}
-
-class OperatorMultiply {
-
-	function apply($a, $b) {
-		return $a * $b;
-	}
-
-}
-
-class OperatorDivide {
-
-	function apply($a, $b) {
-		return $a / $b;
-	}
-
-}
-
-class OperatorAdd {
-
-	function apply($a, $b) {
-		return $a + $b;
-	}
-
-}
-
-class OperatorSubtract {
-
-	function apply($a, $b) {
-		return $a - $b;
-	}
-
-}
-
-function math_calculate($tree) {
-
-	$args = array();
-	$token = $tree[0];
-	$value = $tree[1];
-
-	if(is_array($value)) {
-		foreach($value as $child) {
-			$args[] = math_calculate($child);
-		}
-	}
-
-	if($token == "float") {
-		$result = new NodeFloat($value);
-	} else if($tree[0] == "integer") {
-		$result = new NodeInteger($value);
-	} else if($tree[0] == "op") {
-		$result = new NodeOperation($args[0], $args[1], $args[2]);
-	} else if($tree[0] == "exponent") {
-		$result = new OperatorExponent();
-	} else if($tree[0] == "multiply") {
-		$result = new OperatorMultiply();
-	} else if($tree[0] == "divide") {
-		$result = new OperatorDivide();
-	} else if($tree[0] == "add") {
-		$result = new OperatorAdd();
-	} else if($tree[0] == "subtract") {
-		$result = new OperatorSubtract();
-	} else if($tree[0] == "paren") {
-		$result = $args[1];
-	} else if(count($args)) {
-		$result = $args[0];
-	} else {
-		$result = null;
-	}
-
-	return $result;
-}
-
-function math_evaluate($expr) {
-	$tokens = math_lexer($expr);
-	$syntax = math_syntax($tokens);
-	$result = math_calculate($syntax);
 	return $result->get();
 }
