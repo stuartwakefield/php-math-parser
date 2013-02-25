@@ -122,26 +122,26 @@ the following rules:
 We can perform preanalysis of the grammar to work out the minimum and maximum sequence lengths
 which I will express as a tuple (min, max). The terminals are simple to work out, (1,1):
 
-	S -> (1,1)
-	S -> (1,1)
-	S -> S (1,1) S
-	S -> S (1,1) S
-	S -> S (1,1) S
-	S -> S (1,1) S
-	S -> S (1,1) S
-	S -> (1,1) S (1,1)
+	S -> (1 1)
+	S -> (1 1)
+	S -> S (1 1) S
+	S -> S (1 1) S
+	S -> S (1 1) S
+	S -> S (1 1) S
+	S -> S (1 1) S
+	S -> (1 1) S (1 1)
 
 With the terminals worked out we can now work out the non-terminals, or in this case just `S` which
 has a minimum length pattern as a length of `1`, there is no maximum length as the rule is cyclic.
 
-    S -> (1,1)
-    S -> (1,1)
-    S -> (1,*) (1,1) (1,*)
-    S -> (1,*) (1,1) (1,*)
-    S -> (1,*) (1,1) (1,*)
-    S -> (1,*) (1,1) (1,*)
-    S -> (1,*) (1,1) (1,*)
-    S -> (1,1) (1,*) (1,1)
+    S -> (1 1)
+    S -> (1 1)
+    S -> (1 *) (1 1) (1 *)
+    S -> (1 *) (1 1) (1 *)
+    S -> (1 *) (1 1) (1 *)
+    S -> (1 *) (1 1) (1 *)
+    S -> (1 *) (1 1) (1 *)
+    S -> (1 1) (1 *) (1 1)
 
 With this information we can split up the tokens easily, for example:
 
@@ -166,7 +166,7 @@ Always check the terminals first as this is the least expensive check. In the ab
 algorithm should be able to determine that it only needs to check for the terminal symbol in the
 middle three tokens:
 
-    {minus, integer, plus}
+    {minus integer plus}
 
 The result of a positive match will determine the split for subsequent pattern matching. So it matches
 a `plus` and the next two arrays of tokens `{integer minus integer}` and `{integer}` are passed to the
