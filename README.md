@@ -41,7 +41,7 @@ The next pattern becomes more complicated:
 	S -> S add S
 
 It is more complicated as the pattern is a mix of terminal symbols (symbols which there are no 
-subsequent transformation rules and and non-terminals. The algorithm should leverage the fact that 
+subsequent transformation rules) and and non-terminals. The algorithm should leverage the fact that 
 the `S` symbol has to be a chain of tokens where the minimum length of the chain is `1` and that 
 the `add` symbol is the least expensive symbol to check. Therefore, it is optimal to only check the 
 tokens from the second index to the second to last index:
