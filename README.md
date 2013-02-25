@@ -206,4 +206,4 @@ middle three tokens:
 The result of a positive match will determine the split for subsequent pattern matching. So it matches
 a `plus` and the next two arrays of tokens `{integer minus integer}` and `{integer}` are passed to the
 next round of pattern matching (A failure to match submatches will return to this step to continue 
-subsequent pattern matchin).
+subsequent pattern matching).
